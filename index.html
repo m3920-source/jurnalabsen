@@ -2173,10 +2173,21 @@
         // Journal Management
         document.getElementById('jurnalForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            const tanggal = document.getElementById('jurnalTanggal').value;
+            const kelas = document.getElementById('jurnalKelas').value;
+
+            // Cek apakah data absensi ada sebelum menyimpan
+            const attendanceRecord = attendance.find(record => record.date === tanggal && record.class === kelas);
+
+            if (!attendanceRecord) {
+                showNotification('Harap isi input absen terlebih dahulu agar jurnal bisa tersimpan.', 'error');
+                return; // Menghentikan proses penyimpanan jika absen tidak ada
+            }
             
             const journalData = {
-                date: document.getElementById('jurnalTanggal').value,
-                class: document.getElementById('jurnalKelas').value,
+                date: tanggal,
+                class: kelas,
                 jam: document.getElementById('jurnalJam').value,
                 materi: document.getElementById('jurnalMateri').value,
                 aktivitas: document.getElementById('jurnalAktivitas').value,
@@ -2796,5 +2807,6 @@
     </script>
 </body>
 </html>
+
 
 
