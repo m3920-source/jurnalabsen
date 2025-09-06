@@ -461,15 +461,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">Izin</label>
-                                <input type="number" id="jurnalIzin" min="0" value="0" class="w-full px-3 py-2 border rounded-lg">
+                                <input type="number" id="jurnalIzin" min="0" value="0" class="w-full px-3 py-2 border rounded-lg bg-gray-100" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-2">Sakit</label>
-                                <input type="number" id="jurnalSakit" min="0" value="0" class="w-full px-3 py-2 border rounded-lg">
+                                <input type="number" id="jurnalSakit" min="0" value="0" class="w-full px-3 py-2 border rounded-lg bg-gray-100" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-2">Tanpa Keterangan</label>
-                                <input type="number" id="jurnalTanpaKet" min="0" value="0" class="w-full px-3 py-2 border rounded-lg">
+                                <input type="number" id="jurnalTanpaKet" min="0" value="0" class="w-full px-3 py-2 border rounded-lg bg-gray-100" readonly>
                             </div>
                         </div>
                         
@@ -2204,6 +2204,7 @@
             document.getElementById('jurnalForm').reset();
             document.getElementById('jurnalTanggal').value = journalData.date;
             document.getElementById('jurnalKelas').value = journalData.class;
+            updateJurnalAbsenRekap();
         });
 
         function loadTeacherJurnal() {
@@ -2270,6 +2271,7 @@
                 document.getElementById('jurnalTanpaKet').value = journal.tanpaKet || 0;
                 
                 showTeacherTab('input-jurnal');
+                updateJurnalAbsenRekap();
                 showNotification('Data jurnal dimuat untuk diedit!');
             }
         }
@@ -2277,6 +2279,15 @@
         window.updateJurnalAbsenRekap = function() {
             const tanggal = document.getElementById('jurnalTanggal').value;
             const kelas = document.getElementById('jurnalKelas').value;
+
+            const izinInput = document.getElementById('jurnalIzin');
+            const sakitInput = document.getElementById('jurnalSakit');
+            const tanpaKetInput = document.getElementById('jurnalTanpaKet');
+
+            // Reset to 0 before checking
+            izinInput.value = 0;
+            sakitInput.value = 0;
+            tanpaKetInput.value = 0;
             
             if (!tanggal || !kelas) return;
             
@@ -2293,12 +2304,12 @@
                     else if (student.status === 'tanpaKet') tanpaKetCount++;
                 });
                 
-                document.getElementById('jurnalIzin').value = izinCount;
-                document.getElementById('jurnalSakit').value = sakitCount;
-                document.getElementById('jurnalTanpaKet').value = tanpaKetCount;
+                izinInput.value = izinCount;
+                sakitInput.value = sakitCount;
+                tanpaKetInput.value = tanpaKetCount;
                 showNotification('Data absensi berhasil dimuat.', 'success');
             } else {
-                 showNotification('Data absensi untuk tanggal dan kelas ini tidak ditemukan. Silakan isi manual.', 'error');
+                 showNotification('Data absensi untuk tanggal dan kelas ini tidak ditemukan. Input absensi terlebih dahulu.', 'error');
             }
         }
 
@@ -2785,4 +2796,5 @@
     </script>
 </body>
 </html>
+
 
