@@ -1304,8 +1304,11 @@
             tbody.innerHTML = '';
             
             const filtered = getFilteredJournals();
+            const filterType = document.getElementById('adminJurnalFilter').value;
+
+            const journalsToDisplay = (filterType === 'bulanan') ? filtered.slice(0, 25) : filtered;
             
-            filtered.forEach(j => {
+            journalsToDisplay.forEach(j => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td class="border px-4 py-2">${formatDateToDDMMYYYY(j.date)}</td>
