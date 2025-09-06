@@ -35,9 +35,7 @@
             <form id="loginForm" class="space-y-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                    <select id="username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                         <option value="">Pilih Nama</option>
-                    </select>
+                    <input type="text" id="username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Masukkan username">
                 </div>
                 
                 <div>
@@ -981,7 +979,7 @@
             try {
                 const initialUserSnapshot = await getDocs(usersCollection);
                 users = initialUserSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                populateLoginDropdown();
+                
             } catch (error) {
                 console.error("Error fetching initial users:", error);
                 showNotification("Gagal memuat daftar pengguna.", "error");
@@ -1079,14 +1077,6 @@
                 await batch.commit();
                 console.log("Initial user data has been seeded.");
             }
-        }
-
-        function populateLoginDropdown() {
-            const select = document.getElementById('username');
-            select.innerHTML = '<option value="">Pilih Nama</option>';
-            users.sort((a, b) => a.fullName.localeCompare(b.fullName)).forEach(user => {
-                select.innerHTML += `<option value="${user.username}">${user.fullName}</option>`;
-            });
         }
         
         // --- UI & LOGIC ---
@@ -2217,7 +2207,7 @@
             document.getElementById('jurnalForm').reset();
             document.getElementById('jurnalTanggal').value = journalData.date;
             document.getElementById('jurnalKelas').value = journalData.class;
-            updateJurnalAbsenRekap(false);
+            updateJurnalAbsenRekap(false); // Memanggil updateJurnalAbsenRekap tanpa notifikasi sukses
         });
 
         function loadTeacherJurnal() {
@@ -2321,7 +2311,7 @@
                 sakitInput.value = sakitCount;
                 tanpaKetInput.value = tanpaKetCount;
                 if(showSuccessNotification) {
-                    showNotification('Data Absensi berhasil dimuat.', 'success');
+                    showNotification('Data absensi berhasil dimuat.', 'success');
                 }
             } else {
                  showNotification('Data absensi untuk tanggal dan kelas ini tidak ditemukan. Input absensi terlebih dahulu.', 'error');
