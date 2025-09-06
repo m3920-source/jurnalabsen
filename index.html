@@ -2525,7 +2525,13 @@
             const docId = editingAttendanceId || `${tanggal}_${kelas}`;
 
             await setDoc(doc(db, `artifacts/${appId}/public/data/attendance`, docId), attendanceRecord);
-            showNotification(editingAttendanceId ? 'Absensi berhasil diperbarui!' : 'Absensi berhasil disimpan!');
+            const message = editingAttendanceId ? 'Absensi berhasil diperbarui!' : 'Absensi berhasil disimpan!';
+            showNotification(message);
+            
+            // Reload the page after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
             
             editingAttendanceId = null;
             document.getElementById('absenKelas').value = '';
@@ -2807,6 +2813,7 @@
     </script>
 </body>
 </html>
+
 
 
 
