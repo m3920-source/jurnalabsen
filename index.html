@@ -8,11 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- Firebase Compat Libraries -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore-compat.js"></script>
 
     <style>
         @media print {
@@ -361,7 +356,9 @@
                     <!-- Manajemen Kelas -->
                     <div class="bg-white rounded-lg shadow p-6">
                         <h3 class="text-lg font-semibold mb-4">Manajemen Kelas</h3>
-                        
+                        <div id="totalStudentCountDisplay" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
+                            Total Seluruh Siswa: <span id="totalStudentCount" class="font-bold">0</span>
+                        </div>
                         <button onclick="showClassModal()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 mb-4">
                             Tambah Kelas
                         </button>
@@ -1019,7 +1016,10 @@
 
             onSnapshot(studentsCollection, (snapshot) => {
                 students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (currentRole === 'admin') loadStudentTable();
+                if (currentRole === 'admin') {
+                    loadStudentTable();
+                    updateTotalStudentCount();
+                }
             });
 
             onSnapshot(settingsDoc, (docSnap) => {
@@ -1776,6 +1776,13 @@
         });
 
         // Student Management
+        function updateTotalStudentCount() {
+            const totalCountElement = document.getElementById('totalStudentCount');
+            if (totalCountElement) {
+                totalCountElement.textContent = students.length;
+            }
+        }
+        
         function loadStudentTable() {
             const tbody = document.getElementById('studentTable');
             if(!tbody) return;
@@ -1832,9 +1839,17 @@
         window.editStudent = (studentId) => showStudentModal(studentId);
 
         window.deleteStudent = function(studentId) {
+            const studentToDelete = students.find(s => s.id === studentId);
+            if (!studentToDelete) {
+                showNotification("Siswa tidak ditemukan.", "error");
+                return;
+            }
+            const className = studentToDelete.class;
+
             showConfirmation('Apakah Anda yakin ingin menghapus siswa ini?', async () => {
                 try {
                     await deleteDoc(doc(db, `artifacts/${appId}/public/data/students`, studentId));
+                    await updateClassStudentCounts([className]);
                     showNotification('Siswa berhasil dihapus!');
                 } catch (error) {
                     console.error("Error deleting student: ", error);
@@ -1864,6 +1879,7 @@
                         batch.delete(studentRef);
                     });
                     await batch.commit();
+                    await updateClassStudentCounts([classToDelete]);
                     showNotification(`Semua siswa dari kelas ${classToDelete} berhasil dihapus!`);
                     document.getElementById('deleteStudentClassFilter').value = ''; // Reset dropdown
                 } catch (error) {
@@ -1892,6 +1908,14 @@
             try {
                 const studentId = editingId || nisn;
                 const studentRef = doc(db, `artifacts/${appId}/public/data/students`, studentId);
+
+                let oldClassName = null;
+                if (editingId) {
+                    const studentBeforeUpdate = students.find(s => s.id === editingId);
+                    if (studentBeforeUpdate) {
+                        oldClassName = studentBeforeUpdate.class;
+                    }
+                }
                 
                 if (!editingId) {
                     const docSnap = await getDoc(studentRef);
@@ -1903,6 +1927,13 @@
                 }
 
                 await setDoc(studentRef, studentData);
+
+                const classesToUpdate = [studentClass];
+                if (oldClassName && oldClassName !== studentClass) {
+                    classesToUpdate.push(oldClassName);
+                }
+                await updateClassStudentCounts(classesToUpdate);
+
                 showNotification(editingId ? 'Data siswa berhasil diperbarui!' : 'Siswa berhasil ditambahkan!');
                 closeStudentModal();
             } catch (error) {
@@ -1912,17 +1943,41 @@
         });
 
         // Class Management
+        async function updateClassStudentCounts(classNamesToUpdate = []) {
+            let targetClasses = classNamesToUpdate.length > 0 ? classNamesToUpdate : classes.map(c => c.name);
+            targetClasses = [...new Set(targetClasses)]; // Remove duplicates
+
+            if (targetClasses.length === 0) return;
+
+            console.log("Updating student counts for classes:", targetClasses);
+
+            try {
+                const batch = writeBatch(db);
+                for (const className of targetClasses) {
+                    const classDoc = classes.find(c => c.name === className);
+                    if (classDoc) {
+                        const count = students.filter(s => s.class === className).length;
+                        const classRef = doc(db, `artifacts/${appId}/public/data/classes`, classDoc.id);
+                        batch.update(classRef, { studentCount: count });
+                    }
+                }
+                await batch.commit();
+                console.log("Student counts updated successfully.");
+            } catch (error) {
+                console.error("Error updating student counts:", error);
+            }
+        }
+        
         function loadClassTable() {
             const tbody = document.getElementById('classTable');
             if(!tbody) return;
             tbody.innerHTML = '';
             
             classes.sort((a,b)=>a.name.localeCompare(b.name)).forEach(cls => {
-                const studentCount = students.filter(s => s.class === cls.name).length;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="px-3 py-2 text-sm">${cls.name}</td>
-                    <td class="px-3 py-2 text-sm">${studentCount}</td>
+                    <td class="px-3 py-2 text-sm">${cls.studentCount || 0}</td>
                     <td class="px-3 py-2 text-sm">
                         <button onclick="editClass('${cls.id}')" class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 mr-1">Edit</button>
                         <button onclick="deleteClass('${cls.id}')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600">Hapus</button>
@@ -1996,7 +2051,7 @@
                         return;
                     }
                     const classRef = doc(collection(db, `artifacts/${appId}/public/data/classes`));
-                    await setDoc(classRef, { id: classRef.id, name: className });
+                    await setDoc(classRef, { id: classRef.id, name: className, studentCount: 0 });
                     showNotification('Kelas berhasil ditambahkan!');
                 }
                 closeClassModal();
@@ -2051,7 +2106,7 @@
                     batch.update(studentRef, { class: toClass });
                 });
                 await batch.commit();
-                
+                await updateClassStudentCounts([fromClass, toClass]);
                 showNotification(`${studentsToPromote.length} siswa berhasil dipindahkan!`);
             });
             
@@ -2799,6 +2854,7 @@
                     });
 
                     await batch.commit();
+                    await updateClassStudentCounts(); // Update all class counts after import
 
                     showNotification(`Impor berhasil! ${processedCount} siswa dan ${uniqueClasses.size} kelas unik diproses.`, 'success');
                 } catch (error) {
